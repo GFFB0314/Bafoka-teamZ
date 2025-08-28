@@ -1,0 +1,2060 @@
+{
+  "address": "0xFFD840e78695a3faf29e877AF417258b4FAaE435",
+  "abi": [
+    {
+      "type": "constructor",
+      "stateMutability": "undefined",
+      "payable": false,
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ERC20InsufficientAllowance",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        },
+        {
+          "type": "uint256",
+          "name": "allowance"
+        },
+        {
+          "type": "uint256",
+          "name": "needed"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ERC20InsufficientBalance",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "sender"
+        },
+        {
+          "type": "uint256",
+          "name": "balance"
+        },
+        {
+          "type": "uint256",
+          "name": "needed"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ERC20InvalidApprover",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "approver"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ERC20InvalidReceiver",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "receiver"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ERC20InvalidSender",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "sender"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ERC20InvalidSpender",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OwnableInvalidOwner",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "owner"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OwnableUnauthorizedAccount",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "account"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ReentrancyGuardReentrantCall",
+      "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Approval",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "owner",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "spender",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "value",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "BackerRegistered",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "backer",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "businessName",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "BafokaDistributed",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "amount",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "BafokaRecharged",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "backer",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "amount",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "commission",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CommunityCreated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "currencyName",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CommunityStatsUpdated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "totalMembers",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "totalTransactions",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "totalVolume",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ExchangeCancelled",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "cancelledBy",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ExchangeCompleted",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ExchangeConfirmed",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ExchangeCreated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "provider",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "receiver",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ExchangeFinalized",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "providerRating",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "receiverRating",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "previousOwner",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "newOwner",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ReputationUpdated",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "exchangeId",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "rating",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "comment",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ServiceOfferCreated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "provider",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "description",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "price",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ServiceOfferDeactivated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "ServiceOfferUpdated",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "description",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "price",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Transfer",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "from",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "to",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "value",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "UserRegistered",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "communityId",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "username",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "BACKER_COMMISSION_RATE",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "INITIAL_BAFOKA",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "MAX_REPUTATION",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "MAX_SERVICE_PRICE",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "MIN_REPUTATION",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "MIN_SERVICE_PRICE",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "OFFER_EXPIRY_DAYS",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "addCommunity",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "name"
+        },
+        {
+          "type": "string",
+          "name": "currencyName"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "allowance",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "owner"
+        },
+        {
+          "type": "address",
+          "name": "spender"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "approve",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        },
+        {
+          "type": "uint256",
+          "name": "value"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "backers",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": "backerAddress"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "string",
+          "name": "businessName"
+        },
+        {
+          "type": "bool",
+          "name": "isActive"
+        },
+        {
+          "type": "uint256",
+          "name": "totalRecharges"
+        },
+        {
+          "type": "uint256",
+          "name": "totalVolume"
+        },
+        {
+          "type": "uint256",
+          "name": "commissionRate"
+        },
+        {
+          "type": "uint256",
+          "name": "lastRechargeDate"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "balanceOf",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "account"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "cancelExchange",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "communities",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "string",
+          "name": "name"
+        },
+        {
+          "type": "string",
+          "name": "currencyName"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "bool",
+          "name": "exists"
+        },
+        {
+          "type": "uint256",
+          "name": "totalMembers"
+        },
+        {
+          "type": "uint256",
+          "name": "totalTransactions"
+        },
+        {
+          "type": "uint256",
+          "name": "totalVolume"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "communityBalances",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "communityMembership",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "confirmExchange",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "createExchange",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "receiver"
+        },
+        {
+          "type": "string",
+          "name": "serviceDescription"
+        },
+        {
+          "type": "uint256",
+          "name": "bafokaAmount"
+        },
+        {
+          "type": "uint256",
+          "name": "deadline"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createServiceOffer",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "serviceDescription"
+        },
+        {
+          "type": "uint256",
+          "name": "price"
+        },
+        {
+          "type": "uint256",
+          "name": "expiryDays"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "deactivateBacker",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "backer"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "deactivateServiceOffer",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "decimals",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint8",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "emergencyPause",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "exchangeAgreements",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        },
+        {
+          "type": "address",
+          "name": "provider"
+        },
+        {
+          "type": "address",
+          "name": "receiver"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "string",
+          "name": "serviceDescription"
+        },
+        {
+          "type": "uint256",
+          "name": "bafokaAmount"
+        },
+        {
+          "type": "uint256",
+          "name": "deadline"
+        },
+        {
+          "type": "bool",
+          "name": "isConfirmed"
+        },
+        {
+          "type": "bool",
+          "name": "isCompleted"
+        },
+        {
+          "type": "bool",
+          "name": "isFinalized"
+        },
+        {
+          "type": "uint256",
+          "name": "providerRating"
+        },
+        {
+          "type": "uint256",
+          "name": "receiverRating"
+        },
+        {
+          "type": "uint256",
+          "name": "createdAt"
+        },
+        {
+          "type": "string",
+          "name": "status"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "finalizeExchange",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        },
+        {
+          "type": "uint256",
+          "name": "providerRating"
+        },
+        {
+          "type": "uint256",
+          "name": "receiverRating"
+        },
+        {
+          "type": "string",
+          "name": "comment"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "getActiveServiceOffers",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "uint256",
+          "name": "limit"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple[]",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "offerId"
+            },
+            {
+              "type": "address",
+              "name": "provider"
+            },
+            {
+              "type": "string",
+              "name": "serviceDescription"
+            },
+            {
+              "type": "uint256",
+              "name": "price"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "bool",
+              "name": "isActive"
+            },
+            {
+              "type": "uint256",
+              "name": "createdAt"
+            },
+            {
+              "type": "uint256",
+              "name": "expiresAt"
+            },
+            {
+              "type": "uint256",
+              "name": "totalOrders"
+            },
+            {
+              "type": "uint256",
+              "name": "averageRating"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getBacker",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "backer"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "",
+          "components": [
+            {
+              "type": "address",
+              "name": "backerAddress"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "string",
+              "name": "businessName"
+            },
+            {
+              "type": "bool",
+              "name": "isActive"
+            },
+            {
+              "type": "uint256",
+              "name": "totalRecharges"
+            },
+            {
+              "type": "uint256",
+              "name": "totalVolume"
+            },
+            {
+              "type": "uint256",
+              "name": "commissionRate"
+            },
+            {
+              "type": "uint256",
+              "name": "lastRechargeDate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getCommunity",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "",
+          "components": [
+            {
+              "type": "string",
+              "name": "name"
+            },
+            {
+              "type": "string",
+              "name": "currencyName"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "bool",
+              "name": "exists"
+            },
+            {
+              "type": "uint256",
+              "name": "totalMembers"
+            },
+            {
+              "type": "uint256",
+              "name": "totalTransactions"
+            },
+            {
+              "type": "uint256",
+              "name": "totalVolume"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getCommunityBalance",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getCommunityStats",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getExchangeAgreement",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "exchangeId"
+            },
+            {
+              "type": "address",
+              "name": "provider"
+            },
+            {
+              "type": "address",
+              "name": "receiver"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "string",
+              "name": "serviceDescription"
+            },
+            {
+              "type": "uint256",
+              "name": "bafokaAmount"
+            },
+            {
+              "type": "uint256",
+              "name": "deadline"
+            },
+            {
+              "type": "bool",
+              "name": "isConfirmed"
+            },
+            {
+              "type": "bool",
+              "name": "isCompleted"
+            },
+            {
+              "type": "bool",
+              "name": "isFinalized"
+            },
+            {
+              "type": "uint256",
+              "name": "providerRating"
+            },
+            {
+              "type": "uint256",
+              "name": "receiverRating"
+            },
+            {
+              "type": "uint256",
+              "name": "createdAt"
+            },
+            {
+              "type": "string",
+              "name": "status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getServiceOffer",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "offerId"
+            },
+            {
+              "type": "address",
+              "name": "provider"
+            },
+            {
+              "type": "string",
+              "name": "serviceDescription"
+            },
+            {
+              "type": "uint256",
+              "name": "price"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "bool",
+              "name": "isActive"
+            },
+            {
+              "type": "uint256",
+              "name": "createdAt"
+            },
+            {
+              "type": "uint256",
+              "name": "expiresAt"
+            },
+            {
+              "type": "uint256",
+              "name": "totalOrders"
+            },
+            {
+              "type": "uint256",
+              "name": "averageRating"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getTotalStats",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getUserActiveExchanges",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple[]",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "exchangeId"
+            },
+            {
+              "type": "address",
+              "name": "provider"
+            },
+            {
+              "type": "address",
+              "name": "receiver"
+            },
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "string",
+              "name": "serviceDescription"
+            },
+            {
+              "type": "uint256",
+              "name": "bafokaAmount"
+            },
+            {
+              "type": "uint256",
+              "name": "deadline"
+            },
+            {
+              "type": "bool",
+              "name": "isConfirmed"
+            },
+            {
+              "type": "bool",
+              "name": "isCompleted"
+            },
+            {
+              "type": "bool",
+              "name": "isFinalized"
+            },
+            {
+              "type": "uint256",
+              "name": "providerRating"
+            },
+            {
+              "type": "uint256",
+              "name": "receiverRating"
+            },
+            {
+              "type": "uint256",
+              "name": "createdAt"
+            },
+            {
+              "type": "string",
+              "name": "status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getUserProfile",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "communityId"
+            },
+            {
+              "type": "string",
+              "name": "username"
+            },
+            {
+              "type": "bool",
+              "name": "isRegistered"
+            },
+            {
+              "type": "uint256",
+              "name": "reputation"
+            },
+            {
+              "type": "uint256",
+              "name": "totalExchanges"
+            },
+            {
+              "type": "uint256",
+              "name": "joinDate"
+            },
+            {
+              "type": "bool",
+              "name": "isBacker"
+            },
+            {
+              "type": "uint256",
+              "name": "totalEarned"
+            },
+            {
+              "type": "uint256",
+              "name": "totalSpent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getUserReputationHistory",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "tuple[]",
+          "name": "",
+          "components": [
+            {
+              "type": "uint256",
+              "name": "exchangeId"
+            },
+            {
+              "type": "uint256",
+              "name": "rating"
+            },
+            {
+              "type": "string",
+              "name": "comment"
+            },
+            {
+              "type": "uint256",
+              "name": "timestamp"
+            },
+            {
+              "type": "address",
+              "name": "from"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "isCommunityMember",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "markExchangeCompleted",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "name",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "string",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nextCommunityId",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nextExchangeId",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nextOfferId",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "rechargeBafoka",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "user"
+        },
+        {
+          "type": "uint256",
+          "name": "amount"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "registerBacker",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "string",
+          "name": "businessName"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "registerUser",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "string",
+          "name": "username"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "renounceOwnership",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "reputationHistory",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        },
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "exchangeId"
+        },
+        {
+          "type": "uint256",
+          "name": "rating"
+        },
+        {
+          "type": "string",
+          "name": "comment"
+        },
+        {
+          "type": "uint256",
+          "name": "timestamp"
+        },
+        {
+          "type": "address",
+          "name": "from"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "serviceOffers",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "offerId"
+        },
+        {
+          "type": "address",
+          "name": "provider"
+        },
+        {
+          "type": "string",
+          "name": "serviceDescription"
+        },
+        {
+          "type": "uint256",
+          "name": "price"
+        },
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "bool",
+          "name": "isActive"
+        },
+        {
+          "type": "uint256",
+          "name": "createdAt"
+        },
+        {
+          "type": "uint256",
+          "name": "expiresAt"
+        },
+        {
+          "type": "uint256",
+          "name": "totalOrders"
+        },
+        {
+          "type": "uint256",
+          "name": "averageRating"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "symbol",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "string",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalSupply",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalUsers",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalVolume",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transfer",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "to"
+        },
+        {
+          "type": "uint256",
+          "name": "value"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transferFrom",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "from"
+        },
+        {
+          "type": "address",
+          "name": "to"
+        },
+        {
+          "type": "uint256",
+          "name": "value"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transferOwnership",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "newOwner"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "updateBackerCommissionRate",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "backer"
+        },
+        {
+          "type": "uint256",
+          "name": "newRate"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "updateServiceOffer",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "offerId"
+        },
+        {
+          "type": "string",
+          "name": "serviceDescription"
+        },
+        {
+          "type": "uint256",
+          "name": "price"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "userProfiles",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "communityId"
+        },
+        {
+          "type": "string",
+          "name": "username"
+        },
+        {
+          "type": "bool",
+          "name": "isRegistered"
+        },
+        {
+          "type": "uint256",
+          "name": "reputation"
+        },
+        {
+          "type": "uint256",
+          "name": "totalExchanges"
+        },
+        {
+          "type": "uint256",
+          "name": "joinDate"
+        },
+        {
+          "type": "bool",
+          "name": "isBacker"
+        },
+        {
+          "type": "uint256",
+          "name": "totalEarned"
+        },
+        {
+          "type": "uint256",
+          "name": "totalSpent"
+        }
+      ]
+    }
+  ],
+  "network": "sepolia",
+  "deployer": "0xFDB55c5EE7e6BdAc9f213fD00c9bcEe20ee105D1",
+  "deploymentTime": "2025-08-27T20:49:25.851Z",
+  "blockNumber": 9077446
+}

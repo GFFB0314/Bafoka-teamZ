@@ -1,0 +1,33 @@
+# Enhanced Blockchain & Bafoka API Integration Requirements
+# Add these to your existing requirements.txt
+
+# Blockchain Integration
+web3>=6.0.0
+eth-account>=0.9.0
+eth-hash>=0.5.0
+eth-typing>=3.0.0
+py-evm>=0.7.0
+
+# Enhanced HTTP Requests
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Additional Crypto Support
+cryptography>=41.0.0
+pycryptodome>=3.18.0
+
+# Environment & Configuration
+python-dotenv>=1.0.0
+
+# Data Processing
+jsonschema>=4.17.0
+python-dateutil>=2.8.0
+
+# Logging & Monitoring (optional but recommended)
+structlog>=23.1.0
+prometheus-client>=0.17.0
+
+# Development & Testing (optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+responses>=0.23.0
