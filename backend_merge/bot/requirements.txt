@@ -3,3 +3,4 @@ Flask-SQLAlchemy
 twilio
 python-dotenv
 web3 # optional, only when implementing chain
+requests # For API requests
