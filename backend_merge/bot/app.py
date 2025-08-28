@@ -19,7 +19,7 @@ try:
     from .db import db
     from . import core_logic as core
     from .models import User, Offer, Agreement, Transaction
-    from . import chain  # placeholder for on-chain calls
+    from . import blockchain_utils as web3  # placeholder for on-chain calls
     try:
         from .bafoka_client import get_balance as bafoka_get_balance
     except Exception:
@@ -31,7 +31,7 @@ except ImportError:
     from bot.db import db
     from bot import core_logic as core
     from bot.models import User, Offer, Agreement, Transaction
-    from bot import chain  # placeholder for on-chain calls
+    from bot import blockchain_utils as web3  # placeholder for on-chain calls
     try:
         from bot.bafoka_client import get_balance as bafoka_get_balance
     except Exception:
@@ -199,7 +199,7 @@ def create_app():
                 return str(resp)
             # best-effort on-chain call; don't block user if chain fails
             try:
-                tx = chain.create_agreement_on_chain(ag.id, ag.offer.id, requester_addr="0xMOCK")
+                tx = web3.create_agreement_on_chain(ag.id, ag.offer.id, requester_addr="0xMOCK")
                 ag.chain_tx = tx.get("tx_hash")
                 ag.status = "created_on_chain"
                 db.session.add(ag)
@@ -390,6 +390,21 @@ def create_app():
         offer_id = int(data.get("offer_id"))
         requester_phone = normalize_phone(data.get("requester_phone") or "")
         ag = core.initiate_agreement(offer_id, requester_phone)
+        
+        # best-effort on-chain call; don't block user if chain fails
+        try:
+            tx = web3.create_agreement_on_chain(ag.id, ag.offer.id, requester_addr="0xMOCK")
+            ag.chain_tx = tx.get("tx_hash")
+            ag.status = "created_on_chain"
+            db.session.add(ag)
+            db.session.commit()
+            # Try to confirm on chain
+            if ag.chain_tx:
+                confirm_tx = web3.confirm_agreement_on_chain(ag.chain_tx)
+                LOG.info("Agreement confirmation result: %s", confirm_tx)
+        except Exception as e:
+            LOG.info("Chain operations failed (non-blocking): %s", e)
+            
         return jsonify({"agreement_id": ag.id, "status": ag.status})
 
     return app
