@@ -37,6 +37,12 @@ except ImportError:
     except Exception:
         bafoka_get_balance = None
 
+try:
+    from . import voice_utils
+except ImportError:
+    from bot import voice_utils
+
+
 LOG = logging.getLogger("troc_service")
 LOG.setLevel(logging.INFO)
 
@@ -47,13 +53,119 @@ def normalize_phone(raw: str) -> str:
     """
     if not raw:
         return raw
-    s = raw.strip()
-    # Twilio uses "whatsapp:+12345". If user passed +12345, keep it.
-    return s
+    if raw.startswith("whatsapp:"):
+        return raw.replace("whatsapp:", "")
+    return raw.strip()
+
+
+def process_command(phone: str, text: str) -> str:
+    """
+    Core text processing logic.
+    Used by both Twilio webhook and Voice API.
+    """
+    if not text:
+        return "Please say something or send a command."
+    
+    parts = text.strip().split()
+    cmd = parts[0].lower()
+    
+    if cmd in ["/start", "hi", "hello", "bonjour"]:
+        return "Welcome to Troc-Service! Commands:\n/register <COMMUNITY> | <Name> | <Skill>\n/offer <Title> | <Desc> | <Price>\n/search <Keyword>\n/balance\n/transfer <Phone> <Amount>"
+
+    if cmd == "/register":
+        # /register BAMEKA | Jean | Farming
+        try:
+            content = " ".join(parts[1:])
+            if "|" in content:
+                # Split by pipe
+                subparts = [s.strip() for s in content.split("|")]
+                if len(subparts) >= 3:
+                    comm, name, skill = subparts[0], subparts[1], subparts[2]
+                    user, created = core.register_user(phone, name=name, skill=skill, community=comm)
+                    return f"Welcome {name}! Wallet created. Balance: {user.bafoka_balance} {user.bafoka_local_name}"
+            return "Usage: /register <COMMUNITY> | <Name> | <Skill>"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    if cmd == "/balance":
+        user = core.get_user_by_phone(phone)
+        if not user:
+            return "User not found. /register first."
+        
+        local = user.bafoka_balance
+        ext_msg = ""
+        if bafoka_get_balance:
+            try:
+                ext = bafoka_get_balance(user.phone)
+                ext_msg = f"\nReal Bafoka: {ext.get('balance')} {ext.get('currency')}"
+            except:
+                ext_msg = "\n(Bafoka API unavailable)"
+        return f"Local Balance: {local} {user.bafoka_local_name}{ext_msg}"
+
+    if cmd == "/transfer":
+        # /transfer +237... 100
+        try:
+            if len(parts) < 3:
+                return "Usage: /transfer <Phone> <Amount>"
+            to_phone = normalize_phone(parts[1])
+            amount = int(parts[2])
+            res = core.transfer_bafoka(phone, to_phone, amount)
+            return f"Transfer successful! TX: {res['tx_id']}"
+        except Exception as e:
+            return f"Transfer failed: {str(e)}"
+
+    if cmd == "/offer":
+        # /offer Selling Maize | Fresh harvest | 5000
+        try:
+            content = " ".join(parts[1:])
+            if "|" in content:
+                subparts = [s.strip() for s in content.split("|")]
+                if len(subparts) >= 3:
+                    title, desc, price = subparts[0], subparts[1], float(subparts[2])
+                    off = core.create_offer_for_user(phone, desc, title=title, price=price)
+                    return f"Offer created! ID: {off.id}"
+            return "Usage: /offer <Title> | <Desc> | <Price>"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    if cmd == "/search":
+        try:
+            keyword = " ".join(parts[1:])
+            offers = core.find_offers_by_keyword(keyword)
+            if not offers:
+                return "No offers found."
+            return "\n".join([f"#{o.id} {o.title}: {o.price} ({o.owner.phone})" for o in offers])
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    if cmd == "/agree":
+        try:
+            offer_id = int(parts[1])
+            ag = core.initiate_agreement(offer_id, phone)
+            return f"Agreement initiated for Offer #{offer_id}. Status: {ag.status}"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    return "Unknown command. Try /start"
+
+
+def twilio_chatbot_webhook():
+    """
+    Handles incoming Twilio/WhatsApp messages.
+    """
+    from_number = request.values.get("From", "")
+    body = request.values.get("Body", "")
+    phone = normalize_phone(from_number)
+    
+    response_text = process_command(phone, body)
+    
+    resp = MessagingResponse()
+    resp.message(response_text)
+    return str(resp)
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='../static')
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///whatsapp_app.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -81,199 +193,6 @@ def create_app():
                 db.session.commit()
         except Exception as e:
             LOG.warning("SQLite auto-migrate skipped/failed: %s", e)
-
-    #
-    # ----- Twilio / WhatsApp chatbot webhook (keeps your original handlers) -----
-    #
-    @app.route("/webhook", methods=["POST"])
-    def twilio_chatbot_webhook():
-        from_phone = request.values.get("From", "").strip()
-        body = request.values.get("Body", "").strip()
-        LOG.info("Incoming message: from=%s body=%s", from_phone, body)
-        resp = MessagingResponse()
-
-        if not from_phone:
-            resp.message("No sender info.")
-            return str(resp)
-
-        phone = normalize_phone(from_phone)
-        txt = body or ""
-        low = txt.lower().strip()
-
-        # Process destructive or identity commands before auto-registration
-        # === /delete ===
-        if low.startswith("/delete"):
-            try:
-                ok, info = core.delete_user(phone)
-                if ok:
-                    resp.message("Your account has been deleted ✅")
-                else:
-                    resp.message(f"Deletion not performed: {info}")
-            except Exception as e:
-                resp.message(f"Deletion error: {str(e)}")
-            return str(resp)
-
-        # === /register COMMUNITY | Name | Skill ===
-        if low.startswith("/register"):
-            payload = txt[len("/register"):].strip()
-            parts = [p.strip() for p in payload.split("|")]
-            if len(parts) < 1 or not parts[0]:
-                resp.message("Usage: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            community = parts[0]
-            name = parts[1] if len(parts) > 1 and parts[1] else None
-            skill = parts[2] if len(parts) > 2 and parts[2] else None
-            try:
-                user, created = core.register_user(phone, name=name, skill=skill, community=community)
-                if created:
-                    resp.message(f"Registered ✅\nCommunity: {user.community}\nCurrency: {user.bafoka_local_name}\nName: {user.name}\nSkill: {user.skill or '—'}")
-                else:
-                    resp.message(f"Updated profile ✅\nCommunity: {user.community}\nCurrency: {user.bafoka_local_name}\nName: {user.name}\nSkill: {user.skill or '—'}")
-            except Exception as e:
-                resp.message(str(e))
-            return str(resp)
-
-
-        # === /offer ===
-        if low.startswith("/offer"):
-            # Require registration with community
-            u = core.get_user_by_phone(phone)
-            if not u or not u.community:
-                resp.message("Please register first: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            payload = txt[len("/offer"):].strip()
-            parts = [p.strip() for p in payload.split("|")]
-            if len(parts) < 1 or not parts[0]:
-                resp.message("Usage: /offer description | optional title | optional price")
-                return str(resp)
-            description = parts[0]
-            title = parts[1] if len(parts) > 1 else None
-            try:
-                price = float(parts[2]) if len(parts) > 2 and parts[2] else 0.0
-            except Exception:
-                price = 0.0
-            try:
-                offer = core.create_offer_for_user(phone, description, title=title, price=price)
-                resp.message(f"Offer created ✅\nID:{offer.id}\nTitle:{offer.title}\nPrice:{offer.price}")
-            except Exception as e:
-                resp.message(str(e))
-            return str(resp)
-
-        # === /search ===
-        if low.startswith("/search"):
-            # Require registration to scope search by community
-            u = core.get_user_by_phone(phone)
-            if not u or not u.community:
-                resp.message("Please register first: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            payload = txt[len("/search"):].strip()
-            if not payload:
-                resp.message("Usage: /search <keyword>")
-                return str(resp)
-            offers = core.find_offers_by_keyword(payload, community=u.community)
-            if not offers:
-                resp.message("No open offers found.")
-                return str(resp)
-            lines = []
-            for o in offers:
-                lines.append(f"ID:{o.id} | {o.title or '—'} | {o.price} | Owner:{o.owner.phone}\n{o.description[:80]}")
-            resp.message("Found offers:\n\n" + "\n\n".join(lines))
-            return str(resp)
-
-        # === /agree ===
-        if low.startswith("/agree"):
-            # Require registration with community
-            u = core.get_user_by_phone(phone)
-            if not u or not u.community:
-                resp.message("Please register first: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            payload = txt[len("/agree"):].strip()
-            if not payload.isdigit():
-                resp.message("Usage: /agree <offer_id>")
-                return str(resp)
-            offer_id = int(payload)
-            try:
-                ag = core.initiate_agreement(offer_id, phone)
-            except Exception as e:
-                resp.message(str(e))
-                return str(resp)
-            # best-effort on-chain call; don't block user if chain fails
-            try:
-                tx = web3.create_agreement_on_chain(ag.id, ag.offer.id, requester_addr="0xMOCK")
-                ag.chain_tx = tx.get("tx_hash")
-                ag.status = "created_on_chain"
-                db.session.add(ag)
-                db.session.commit()
-            except Exception as e:
-                LOG.info("Chain create_agreement_on_chain failed (non-blocking): %s", e)
-            resp.message(f"Agreement created (db id: {ag.id}). On-chain tx: {ag.chain_tx or 'n/a'}")
-            return str(resp)
-
-        # === /me ===
-        if low.startswith("/me"):
-            user = core.get_user_by_phone(phone)
-            if not user:
-                resp.message("No user record.")
-            else:
-                resp.message(
-                    f"Registered: {user.phone}\nName: {user.name or '—'}\nSkill: {user.skill or '—'}\n"
-                    f"Offers: {len(user.offers)}\nBalance: {user.bafoka_balance} {user.bafoka_local_name or 'Bafoka'}"
-                )
-            return str(resp)
-
-        # === /balance (chat) ===
-        if low.startswith("/balance") or low.startswith("/solde"):
-            user = core.get_user_by_phone(phone)
-            if not user or not user.community:
-                resp.message("Please register first: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            local_balance = user.bafoka_balance
-            if user.bafoka_wallet_id and bafoka_get_balance:
-                try:
-                    ext = bafoka_get_balance(user.bafoka_wallet_id)
-                    ext_bal = ext.get("balance")
-                    resp.message(
-                        f"Local balance: {local_balance} {user.bafoka_local_name or 'Bafoka'}\nExternal balance: {ext_bal}"
-                    )
-                except Exception:
-                    resp.message(
-                        f"Local balance: {local_balance} {user.bafoka_local_name or 'Bafoka'}\nUnable to reach Bafoka API."
-                    )
-            else:
-                resp.message(f"Local balance: {local_balance} {user.bafoka_local_name or 'Bafoka'}")
-            return str(resp)
-
-        # === /transfer (chat) ===
-        if low.startswith("/transfer") or low.startswith("/pay"):
-            # Require registration with community
-            u = core.get_user_by_phone(phone)
-            if not u or not u.community:
-                resp.message("Please register first: /register <COMMUNITY> | <Name> | <Skill>\nCommunities: BAMEKA, BATOUFAM, FONDJOMEKWET")
-                return str(resp)
-            parts = txt.split()
-            if len(parts) < 3:
-                resp.message("Usage: /transfer <to_phone> <amount>")
-                return str(resp)
-            to_phone = normalize_phone(parts[1])
-            try:
-                amount = int(parts[2])
-            except Exception:
-                resp.message("Invalid amount; use an integer.")
-                return str(resp)
-            try:
-                res = core.transfer_bafoka(phone, to_phone, amount)
-                resp.message(f"Transfer initiated (tx:{res.get('tx_id')}). Status: {res.get('status')}")
-            except Exception as e:
-                resp.message(f"Transfer error: {str(e)}")
-            return str(resp)
-
-        # fallback: help
-        resp.message(
-            "Commands:\n/register <COMMUNITY> | <Name> | <Skill>\n/offer description | title | price\n/search <keyword>\n"
-            "/agree <offer_id>\n/me\n/balance\n/transfer <to_phone> <amount>\n/delete\n"
-            "Communities: BAMEKA (MUNKAP), BATOUFAM (MBIP TSWEFAP), FONDJOMEKWET (MBAM)"
-        )
-        return str(resp)
 
     # Aliases for Twilio webhook (common misconfigurations)
     @app.route("/", methods=["POST"])
@@ -363,9 +282,10 @@ def create_app():
             return jsonify({"error": "user not found"}), 404
         local = user.bafoka_balance
         external = None
-        if user.bafoka_wallet_id and bafoka_get_balance:
+        if bafoka_get_balance:
             try:
-                external = bafoka_get_balance(user.bafoka_wallet_id).get("balance")
+                # New client uses phone number
+                external = bafoka_get_balance(user.phone).get("balance")
             except Exception:
                 external = None
         return jsonify({"phone": user.phone, "local_balance": local, "external_balance": external, "currency_name": user.bafoka_local_name or "Bafoka"})
@@ -383,7 +303,6 @@ def create_app():
             return jsonify({"received": True, "action": res.get("action"), "status": res.get("status")}), 200
         else:
             return jsonify({"received": False, "error": res.get("error")}), 500
-
     @app.route("/api/agreements", methods=["POST"])
     def api_create_agreement():
         data = request.get_json() or {}
@@ -406,6 +325,88 @@ def create_app():
             LOG.info("Chain operations failed (non-blocking): %s", e)
             
         return jsonify({"agreement_id": ag.id, "status": ag.status})
+
+    @app.route("/api/me", methods=["GET"])
+    def api_me():
+        phone = normalize_phone(request.args.get("phone") or "")
+        if not phone:
+            return jsonify({"error": "phone required"}), 400
+        user = core.get_user_by_phone(phone)
+        if not user:
+            return jsonify({"error": "user not found"}), 404
+        return jsonify({
+            "phone": user.phone,
+            "name": user.name,
+            "skill": user.skill,
+            "community": user.community,
+            "bafoka_balance": user.bafoka_balance,
+            "currency": user.bafoka_local_name,
+            "offers_count": len(user.offers)
+        })
+
+    @app.route("/api/delete", methods=["POST"])
+    def api_delete():
+        data = request.get_json() or {}
+        phone = normalize_phone(data.get("phone") or "")
+        if not phone:
+            return jsonify({"error": "phone required"}), 400
+        try:
+            ok, info = core.delete_user(phone)
+            if ok:
+                return jsonify({"success": True, "message": "Account deleted"})
+            else:
+                return jsonify({"success": False, "message": info}), 400
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.route("/api/voice/process", methods=["POST"])
+    def api_voice_process():
+        """
+        Endpoint for Botpress to send audio URL.
+        1. Download audio
+        2. Transcribe (Whisper)
+        3. Execute Command
+        4. Generate Speech (TTS)
+        5. Return Text + Audio URL
+        """
+        data = request.get_json() or {}
+        audio_url = data.get("audio_url")
+        phone = normalize_phone(data.get("phone") or "")
+        
+        if not audio_url:
+            return jsonify({"error": "audio_url required"}), 400
+            
+        try:
+            # 1. Download
+            audio_path = voice_utils.download_audio(audio_url, save_dir=os.path.join(app.static_folder, "audio"))
+            
+            # 2. Transcribe
+            text = voice_utils.transcribe_audio(audio_path)
+            
+            # 3. Execute Command
+            response_text = process_command(phone, text)
+            
+            # 4. Generate Speech
+            # voice_utils.generate_speech returns relative path e.g. "audio/xyz.mp3"
+            # We need full URL for Botpress
+            audio_rel_path = voice_utils.generate_speech(response_text, save_dir=os.path.join(app.static_folder, "audio"))
+            
+            # Construct full URL
+            # Assuming app runs on same host/port, or via ngrok
+            # For local dev, we might need request.host_url
+            audio_full_url = f"{request.host_url}static/{audio_rel_path}"
+            
+            return jsonify({
+                "transcription": text,
+                "response_text": response_text,
+                "audio_url": audio_full_url
+            })
+            
+        except Exception as e:
+            LOG.exception("Voice processing failed")
+            return jsonify({"error": str(e)}), 500
+
+
 
     return app
 

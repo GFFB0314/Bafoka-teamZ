@@ -31,21 +31,17 @@ def currency_for_community(comm: Optional[str]) -> Optional[str]:
 # Try to import real bafoka client; if missing, fallback to stubs for dev
 try:
     # import transfer as bafoka_transfer so code below reads clearly
-    from .bafoka_client import create_wallet, credit_wallet, transfer as bafoka_transfer, get_balance
+    from .bafoka_client import create_wallet, transfer as bafoka_transfer, get_balance
 except Exception as e:
     LOG.warning("bafoka_client not available; using stubs: %s", e)
 
-    def create_wallet(display_name, metadata=None):
-        return {"wallet_id": f"mock-{display_name}", "address": "0xMOCK"}
+    def create_wallet(phone, name, community_id="BAMEKA", age=25):
+        return {"id": f"mock-{phone}", "phoneNumber": phone}
 
-    def credit_wallet(wallet_id, amount, reason="signup"):
-        # pretend success
-        return {"tx_id": f"mock-credit-{wallet_id}", "status": "success"}
+    def bafoka_transfer(from_phone, to_phone, amount):
+        return {"tx_id": f"mock-transfer-{from_phone}-{to_phone}-{amount}", "status": "pending"}
 
-    def bafoka_transfer(from_wallet_id, to_wallet_id, amount, idempotency_key=None):
-        return {"tx_id": f"mock-transfer-{from_wallet_id}-{to_wallet_id}-{amount}", "status": "pending"}
-
-    def get_balance(wallet_id):
+    def get_balance(phone):
         return {"balance": 0}
 
 
@@ -95,24 +91,20 @@ def register_user(phone: str, name: str = None, skill: str = None, community: st
         db.session.add(user)
         db.session.commit()
 
-    # If newly created - ensure external wallet and initial credit (idempotent)
+    # If newly created - ensure external wallet (idempotent)
     if created and not user.bafoka_wallet_id:
-        display = name or phone
         try:
-            resp = create_wallet(display_name=display, metadata={"phone": phone, "community": user.community})
-            wallet_id = resp.get("wallet_id") or resp.get("id")
+            # Default age to 25 if not known, community ID is the canonical name
+            resp = create_wallet(phone=phone, name=name or phone, community_id=user.community, age=25)
+            # API might return 'id' or just success. We use phone as the key identifier now.
+            # We store the phone as the wallet_id for compatibility or the returned ID if present.
+            wallet_id = resp.get("id") or phone
             if wallet_id:
                 user.bafoka_wallet_id = wallet_id
+                # Initial credit is not supported by public API, assuming manual or pre-funded
+                user.bafoka_balance = (user.bafoka_balance or 0) + 1000 # Optimistic initial balance for hackathon demo
                 db.session.add(user)
                 db.session.commit()
-                # Try to credit 1000 on signup and reflect locally only on success
-                try:
-                    credit_resp = credit_wallet(wallet_id, amount=1000, reason="signup")
-                    user.bafoka_balance = (user.bafoka_balance or 0) + 1000
-                    db.session.add(user)
-                    db.session.commit()
-                except Exception as e:
-                    LOG.exception("Failed to credit initial Bafoka for wallet %s: %s", wallet_id, e)
         except Exception as e:
             LOG.exception("Failed to create Bafoka wallet for user %s: %s", phone, e)
 
@@ -228,9 +220,8 @@ def transfer_bafoka(from_phone: str, to_phone: str, amount: int, idempotency_key
 
     # call external
     try:
-        if not idempotency_key:
-            idempotency_key = str(uuid.uuid4())
-        resp = bafoka_transfer(from_user.bafoka_wallet_id, to_user.bafoka_wallet_id, amount, idempotency_key=idempotency_key)
+        # API uses phone numbers, not wallet IDs
+        resp = bafoka_transfer(from_user.phone, to_user.phone, amount)
         external_tx_id = resp.get("tx_id") or resp.get("id") or resp.get("transaction_id")
         status = resp.get("status", "pending")
         tx.tx_id = external_tx_id

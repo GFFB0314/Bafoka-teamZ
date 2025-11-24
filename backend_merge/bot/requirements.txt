@@ -4,3 +4,10 @@ twilio
 python-dotenv
 web3 # optional, only when implementing chain
 requests # For API requests
+pytest
+pytest-cov
+typeguard
+anyio
+openai-whisper
+gTTS
+torch
