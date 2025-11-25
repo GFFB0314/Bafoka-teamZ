@@ -11,3 +11,4 @@ anyio
 openai-whisper
 gTTS
 torch
+ffmpeg-python # For audio format conversion (optional, uses system ffmpeg)

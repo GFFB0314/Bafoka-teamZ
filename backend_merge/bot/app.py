@@ -60,13 +60,26 @@ def normalize_phone(raw: str) -> str:
 
 def process_command(phone: str, text: str) -> str:
     """
-    Core text processing logic.
+    Core text processing logic with NLU integration.
     Used by both Twilio webhook and Voice API.
     """
     if not text:
         return "Please say something or send a command."
     
-    parts = text.strip().split()
+    # NLU Integration: Interpret natural language
+    try:
+        from . import nlu
+    except ImportError:
+        from bot import nlu
+        
+    # Enhance command with NLU
+    interpreted_text = nlu.enhance_command_with_nlu(text, phone)
+    
+    # If NLU returned a helpful message (not a command), return it directly
+    if not interpreted_text.startswith('/'):
+        return interpreted_text
+    
+    parts = interpreted_text.strip().split()
     cmd = parts[0].lower()
     
     if cmd in ["/start", "hi", "hello", "bonjour"]:
@@ -362,49 +375,146 @@ def create_app():
     @app.route("/api/voice/process", methods=["POST"])
     def api_voice_process():
         """
-        Endpoint for Botpress to send audio URL.
-        1. Download audio
-        2. Transcribe (Whisper)
-        3. Execute Command
-        4. Generate Speech (TTS)
-        5. Return Text + Audio URL
-        """
-        data = request.get_json() or {}
-        audio_url = data.get("audio_url")
-        phone = normalize_phone(data.get("phone") or "")
+        Enhanced Voice Processing Endpoint for Botpress Integration
         
-        if not audio_url:
-            return jsonify({"error": "audio_url required"}), 400
-            
+        Supports:
+        1. Audio URL or direct file upload
+        2. Flexible output format (audio, text, or both)
+        3. Automatic audio format conversion (via ffmpeg)
+        4. Command execution with user context
+        
+        Request (JSON):
+        {
+          "audio_url": "https://...",  // OR use file upload
+          "phone": "+237...",           // User's phone number
+          "output_format": "both"       // "audio", "text", or "both" (default: "both")
+        }
+        
+        OR multipart/form-data with 'audio' file field
+        
+        Response:
+        {
+          "transcription": "user's spoken text",
+          "response_text": "bot's text response",
+          "audio_url": "https://.../response.mp3",  // Only if output_format includes audio
+          "success": true
+        }
+        """
+        phone = None
+        audio_path = None
+        output_audio_path = None
+        
         try:
-            # 1. Download
-            audio_path = voice_utils.download_audio(audio_url, save_dir=os.path.join(app.static_folder, "audio"))
+            # Parse request - support both JSON and form data
+            if request.is_json:
+                data = request.get_json() or {}
+                audio_url = data.get("audio_url")
+                phone = normalize_phone(data.get("phone") or "")
+                output_format = data.get("output_format", "both").lower()
+                
+                if not audio_url:
+                    return jsonify({
+                        "success": False,
+                        "error": "audio_url required in JSON request"
+                    }), 400
+                
+                # Download audio from URL
+                LOG.info(f"Downloading audio from URL for {phone}")
+                audio_path = voice_utils.download_audio(
+                    audio_url, 
+                    save_dir=os.path.join(app.static_folder, "audio", "input")
+                )
+                
+            else:
+                # Handle file upload
+                if 'audio' not in request.files:
+                    return jsonify({
+                        "success": False,
+                        "error": "audio file or audio_url required"
+                    }), 400
+                
+                audio_file = request.files['audio']
+                phone = normalize_phone(request.form.get("phone", ""))
+                output_format = request.form.get("output_format", "both").lower()
+                
+                # Save uploaded file
+                import uuid
+                filename = f"upload_{uuid.uuid4().hex[:8]}{os.path.splitext(audio_file.filename)[1]}"
+                audio_path = os.path.join(app.static_folder, "audio", "input", filename)
+                os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+                audio_file.save(audio_path)
+                LOG.info(f"Saved uploaded audio file: {audio_path}")
             
-            # 2. Transcribe
-            text = voice_utils.transcribe_audio(audio_path)
+            # Validate output format
+            if output_format not in ["audio", "text", "both"]:
+                output_format = "both"
             
-            # 3. Execute Command
-            response_text = process_command(phone, text)
+            LOG.info(f"Processing voice for {phone}, output_format: {output_format}")
             
-            # 4. Generate Speech
-            # voice_utils.generate_speech returns relative path e.g. "audio/xyz.mp3"
-            # We need full URL for Botpress
-            audio_rel_path = voice_utils.generate_speech(response_text, save_dir=os.path.join(app.static_folder, "audio"))
+            # Step 1: Transcribe audio to text (Whisper)
+            LOG.info("Transcribing audio with Whisper...")
+            transcribed_text = voice_utils.transcribe_audio(audio_path)
+            LOG.info(f"Transcription: {transcribed_text}")
             
-            # Construct full URL
-            # Assuming app runs on same host/port, or via ngrok
-            # For local dev, we might need request.host_url
-            audio_full_url = f"{request.host_url}static/{audio_rel_path}"
+            if not transcribed_text or not transcribed_text.strip():
+                return jsonify({
+                    "success": False,
+                    "error": "Could not transcribe audio - no speech detected",
+                    "transcription": ""
+                }), 400
             
-            return jsonify({
-                "transcription": text,
-                "response_text": response_text,
-                "audio_url": audio_full_url
-            })
+            # Step 2: Execute command based on transcribed text
+            LOG.info(f"Executing command: {transcribed_text}")
+            response_text = process_command(phone, transcribed_text)
+            LOG.info(f"Command response: {response_text}")
+            
+            # Step 3: Prepare response based on output format
+            response_data = {
+                "success": True,
+                "transcription": transcribed_text,
+                "response_text": response_text
+            }
+            
+            # Step 4: Generate audio response if needed
+            if output_format in ["audio", "both"]:
+                LOG.info("Generating audio response with gTTS...")
+                audio_rel_path = voice_utils.generate_speech(
+                    response_text,
+                    save_dir=os.path.join(app.static_folder, "audio", "output")
+                )
+                
+                # Construct full URL for Botpress
+                # Use request.host_url for proper URL construction
+                audio_full_url = f"{request.host_url}static/audio/output/{os.path.basename(audio_rel_path)}"
+                response_data["audio_url"] = audio_full_url
+                LOG.info(f"Audio response URL: {audio_full_url}")
+            
+            # Cleanup input audio file
+            try:
+                if audio_path and os.path.exists(audio_path):
+                    os.remove(audio_path)
+                    LOG.info(f"Cleaned up input audio: {audio_path}")
+            except Exception as cleanup_error:
+                LOG.warning(f"Failed to cleanup input audio: {cleanup_error}")
+            
+            return jsonify(response_data), 200
             
         except Exception as e:
             LOG.exception("Voice processing failed")
-            return jsonify({"error": str(e)}), 500
+            
+            # Cleanup on error
+            try:
+                if audio_path and os.path.exists(audio_path):
+                    os.remove(audio_path)
+            except:
+                pass
+            
+            return jsonify({
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }), 500
+
 
 
 

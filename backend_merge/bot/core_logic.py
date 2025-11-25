@@ -10,10 +10,13 @@ LOG = logging.getLogger("core_logic")
 LOG.setLevel(logging.INFO)
 
 # Community to currency mapping (canonical uppercase keys)
+# Real mapping from Bafoka API /api/groupements:
+# [{'id': 1, 'name': 'Batoufam'}, {'id': 2, 'name': 'Fondjomekwet'}, {'id': 3, 'name': 'Bameka'}]
 COMMUNITY_TO_CURRENCY = {
-    "BAMEKA": "MUNKAP",
     "BATOUFAM": "MBIP TSWEFAP",
     "FONDJOMEKWET": "MBAM",
+    "FONDJOMENKWET": "MBAM",  # Alternative spelling
+    "BAMEKA": "MUNKAP",
 }
 
 def canonicalize_community(value: str) -> Optional[str]:
@@ -94,17 +97,36 @@ def register_user(phone: str, name: str = None, skill: str = None, community: st
     # If newly created - ensure external wallet (idempotent)
     if created and not user.bafoka_wallet_id:
         try:
-            # Default age to 25 if not known, community ID is the canonical name
-            resp = create_wallet(phone=phone, name=name or phone, community_id=user.community, age=25)
-            # API might return 'id' or just success. We use phone as the key identifier now.
-            # We store the phone as the wallet_id for compatibility or the returned ID if present.
-            wallet_id = resp.get("id") or phone
-            if wallet_id:
-                user.bafoka_wallet_id = wallet_id
-                # Initial credit is not supported by public API, assuming manual or pre-funded
-                user.bafoka_balance = (user.bafoka_balance or 0) + 1000 # Optimistic initial balance for hackathon demo
-                db.session.add(user)
-                db.session.commit()
+            # Convert community name to groupement_id (matching real API)
+            # Mapping from Bafoka API /api/groupements:
+            community_to_groupement = {
+                "BATOUFAM": 1,
+                "FONDJOMEKWET": 2,
+                "FONDJOMENKWET": 2,  # Alternative spelling
+                "BAMEKA": 3,
+            }
+            groupement_id = community_to_groupement.get(user.community.upper() if user.community else "", 3)
+            
+            # Call create_wallet with EXACT API parameter names
+            resp = create_wallet(
+                phoneNumber=phone,
+                fullName=name or phone,
+                groupement_id=groupement_id,
+                age="25",  # String as required by API
+                sex="M",   # Default
+                blockchainAddress=""  # Empty for new accounts
+            )
+            # Real API response structure: {'code': 200, 'data': {'blockchainAddress': '0x...', ...}, ...}
+            # Extract blockchain address from response
+            if resp.get('code') == 200 and resp.get('data'):
+                blockchain_addr = resp['data'].get('blockchainAddress')
+                if blockchain_addr:
+                    user.bafoka_wallet_id = blockchain_addr
+                    # Real API starts with 0 balance - no automatic credit
+                    # Balance remains 0 until user receives funds
+                    db.session.add(user)
+                    db.session.commit()
+                    LOG.info(f"Bafoka wallet created for {phone}: {blockchain_addr}")
         except Exception as e:
             LOG.exception("Failed to create Bafoka wallet for user %s: %s", phone, e)
 
