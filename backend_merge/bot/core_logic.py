@@ -54,12 +54,11 @@ def get_user_by_phone(phone: str) -> Optional[User]:
     return User.query.filter_by(phone=phone).first()
 
 
-def register_user(phone: str, name: str = None, skill: str = None, community: str = None, local_name: str = None) -> Tuple[User, bool]:
+def register_user(phone: str, name: str = None, skill: str = None, community: str = None, local_name: str = None, age: str = None) -> Tuple[User, bool]:
     """
-    Create or update user.
+    Create a new user. Raises ValueError if phone number already exists.
     When creating a new user, community is validated and currency name is set accordingly.
-    On first creation, create a Bafoka wallet and attempt to credit 1000 units.
-    We update local bafoka_balance only when external credit succeeds.
+    On first creation, create a Bafoka wallet.
     Returns (user, created_bool)
     """
     phone = (phone or "").strip()
@@ -69,30 +68,22 @@ def register_user(phone: str, name: str = None, skill: str = None, community: st
     if community and not canon_comm:
         raise ValueError("Invalid community. Allowed: BAMEKA, BATOUFAM, FONDJOMEKWET")
 
-    user = get_user_by_phone(phone)
-    created = False
-    if not user:
-        user = User(
-            phone=phone,
-            name=name,
-            skill=skill,
-            community=canon_comm or None,
-            bafoka_local_name=(local_name or currency_for_community(canon_comm))
-        )
-        db.session.add(user)
-        db.session.commit()
-        created = True
-    else:
-        # Update fields if provided
-        if name is not None:
-            user.name = name
-        if skill is not None:
-            user.skill = skill
-        if canon_comm is not None and user.community != canon_comm:
-            user.community = canon_comm
-            user.bafoka_local_name = currency_for_community(canon_comm)
-        db.session.add(user)
-        db.session.commit()
+    # Check if user already exists - reject duplicate registrations
+    existing_user = get_user_by_phone(phone)
+    if existing_user:
+        raise ValueError(f"Phone number {phone} is already registered. Use /balance to check your account.")
+
+    # Create new user
+    user = User(
+        phone=phone,
+        name=name,
+        skill=skill,
+        community=canon_comm or None,
+        bafoka_local_name=(local_name or currency_for_community(canon_comm))
+    )
+    db.session.add(user)
+    db.session.commit()
+    created = True
 
     # If newly created - ensure external wallet (idempotent)
     if created and not user.bafoka_wallet_id:
@@ -107,12 +98,15 @@ def register_user(phone: str, name: str = None, skill: str = None, community: st
             }
             groupement_id = community_to_groupement.get(user.community.upper() if user.community else "", 3)
             
+            # Use provided age or default to "25" (string as required by API)
+            user_age = str(age) if age else "25"
+            
             # Call create_wallet with EXACT API parameter names
             resp = create_wallet(
                 phoneNumber=phone,
                 fullName=name or phone,
                 groupement_id=groupement_id,
-                age="25",  # String as required by API
+                age=user_age,
                 sex="M",   # Default
                 blockchainAddress=""  # Empty for new accounts
             )

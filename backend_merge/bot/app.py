@@ -86,17 +86,22 @@ def process_command(phone: str, text: str) -> str:
         return "Welcome to Troc-Service! Commands:\n/register <COMMUNITY> | <Name> | <Skill>\n/offer <Title> | <Desc> | <Price>\n/search <Keyword>\n/balance\n/transfer <Phone> <Amount>"
 
     if cmd == "/register":
-        # /register BAMEKA | Jean | Farming
+        # /register BAMEKA | Jean | 25 | Farming
         try:
             content = " ".join(parts[1:])
             if "|" in content:
                 # Split by pipe
                 subparts = [s.strip() for s in content.split("|")]
-                if len(subparts) >= 3:
+                if len(subparts) >= 4:
+                    comm, name, age, skill = subparts[0], subparts[1], subparts[2], subparts[3]
+                    user, created = core.register_user(phone, name=name, skill=skill, community=comm, age=age)
+                    return f"Welcome {name}! Wallet created.\nCommunity: {user.community}\nAge: {age}\nSkill: {skill}\nBalance: {user.bafoka_balance} {user.bafoka_local_name}"
+                elif len(subparts) >= 3:
+                    # Fallback: old format without age (COMMUNITY | Name | Skill)
                     comm, name, skill = subparts[0], subparts[1], subparts[2]
                     user, created = core.register_user(phone, name=name, skill=skill, community=comm)
-                    return f"Welcome {name}! Wallet created. Balance: {user.bafoka_balance} {user.bafoka_local_name}"
-            return "Usage: /register <COMMUNITY> | <Name> | <Skill>"
+                    return f"Welcome {name}! Wallet created.\nCommunity: {user.community}\nSkill: {skill}\nBalance: {user.bafoka_balance} {user.bafoka_local_name}"
+            return "Usage: /register <COMMUNITY> | <Name> | <Age> | <Skill>"
         except Exception as e:
             return f"Error: {str(e)}"
 
@@ -250,15 +255,47 @@ def create_app():
 
     @app.route("/api/register", methods=["POST"])
     def api_register():
+        """
+        Registration endpoint supporting both:
+        1. Bafoka API format (phoneNumber, fullName, age, sex, groupement_id)
+        2. Legacy format (phone, name, skill, community)
+        """
         data = request.get_json() or {}
-        phone = normalize_phone(data.get("phone") or "")
-        name = data.get("name")
+        
+        # Try Bafoka API format first (from Botpress)
+        phone = normalize_phone(data.get("phoneNumber") or data.get("phone") or "")
+        name = data.get("fullName") or data.get("name")
+        age = data.get("age")
+        sex = data.get("sex")
+        groupement_id = data.get("groupement_id")
+        
+        # Legacy fields
         skill = data.get("skill")
         community = data.get("community")
         local_name = data.get("local_name")
+        
+        # Convert groupement_id to community name if provided
+        if groupement_id is not None:
+            groupement_to_community = {
+                1: "BATOUFAM",
+                2: "FONDJOMEKWET",
+                3: "BAMEKA",
+            }
+            community = groupement_to_community.get(int(groupement_id), community)
+        
         if not phone:
-            return jsonify({"error": "phone required"}), 400
-        user, created = core.register_user(phone=phone, name=name, skill=skill, community=community, local_name=local_name)
+            return jsonify({"error": "phone or phoneNumber required"}), 400
+        
+        # Register user with all available fields
+        user, created = core.register_user(
+            phone=phone, 
+            name=name, 
+            skill=skill, 
+            community=community, 
+            local_name=local_name,
+            age=str(age) if age else None
+        )
+        
         return jsonify({
             "id": user.id,
             "phone": user.phone,
@@ -408,9 +445,11 @@ def create_app():
             # Parse request - support both JSON and form data
             if request.is_json:
                 data = request.get_json() or {}
+                LOG.info(f"[VOICE] Received JSON request: {data}")
                 audio_url = data.get("audio_url")
                 phone = normalize_phone(data.get("phone") or "")
                 output_format = data.get("output_format", "both").lower()
+                LOG.info(f"[VOICE] Parameters - Phone: {phone}, Output Format: {output_format}")
                 
                 if not audio_url:
                     return jsonify({
@@ -419,7 +458,7 @@ def create_app():
                     }), 400
                 
                 # Download audio from URL
-                LOG.info(f"Downloading audio from URL for {phone}")
+                LOG.info(f"[VOICE] Downloading audio from URL for {phone}")
                 audio_path = voice_utils.download_audio(
                     audio_url, 
                     save_dir=os.path.join(app.static_folder, "audio", "input")
@@ -436,6 +475,7 @@ def create_app():
                 audio_file = request.files['audio']
                 phone = normalize_phone(request.form.get("phone", ""))
                 output_format = request.form.get("output_format", "both").lower()
+                LOG.info(f"[VOICE] File upload - Phone: {phone}, Output Format: {output_format}")
                 
                 # Save uploaded file
                 import uuid
@@ -443,18 +483,19 @@ def create_app():
                 audio_path = os.path.join(app.static_folder, "audio", "input", filename)
                 os.makedirs(os.path.dirname(audio_path), exist_ok=True)
                 audio_file.save(audio_path)
-                LOG.info(f"Saved uploaded audio file: {audio_path}")
+                LOG.info(f"[VOICE] Saved uploaded audio file: {audio_path}")
             
             # Validate output format
             if output_format not in ["audio", "text", "both"]:
+                LOG.warning(f"[VOICE] Invalid output_format '{output_format}', defaulting to 'both'")
                 output_format = "both"
             
-            LOG.info(f"Processing voice for {phone}, output_format: {output_format}")
+            LOG.info(f"[VOICE] Processing voice for {phone}, output_format: {output_format}")
             
             # Step 1: Transcribe audio to text (Whisper)
-            LOG.info("Transcribing audio with Whisper...")
+            LOG.info("[VOICE] Transcribing audio with Whisper...")
             transcribed_text = voice_utils.transcribe_audio(audio_path)
-            LOG.info(f"Transcription: {transcribed_text}")
+            LOG.info(f"[VOICE] Transcription: {transcribed_text}")
             
             if not transcribed_text or not transcribed_text.strip():
                 return jsonify({
@@ -464,9 +505,9 @@ def create_app():
                 }), 400
             
             # Step 2: Execute command based on transcribed text
-            LOG.info(f"Executing command: {transcribed_text}")
+            LOG.info(f"[VOICE] Executing command: {transcribed_text}")
             response_text = process_command(phone, transcribed_text)
-            LOG.info(f"Command response: {response_text}")
+            LOG.info(f"[VOICE] Command response: {response_text}")
             
             # Step 3: Prepare response based on output format
             response_data = {
@@ -477,7 +518,7 @@ def create_app():
             
             # Step 4: Generate audio response if needed
             if output_format in ["audio", "both"]:
-                LOG.info("Generating audio response with gTTS...")
+                LOG.info("[VOICE] Generating audio response with gTTS...")
                 audio_rel_path = voice_utils.generate_speech(
                     response_text,
                     save_dir=os.path.join(app.static_folder, "audio", "output")
@@ -487,7 +528,9 @@ def create_app():
                 # Use request.host_url for proper URL construction
                 audio_full_url = f"{request.host_url}static/audio/output/{os.path.basename(audio_rel_path)}"
                 response_data["audio_url"] = audio_full_url
-                LOG.info(f"Audio response URL: {audio_full_url}")
+                LOG.info(f"[VOICE] ✅ Audio response URL generated: {audio_full_url}")
+            else:
+                LOG.info(f"[VOICE] ⚠️ Skipping audio generation - output_format is '{output_format}'")
             
             # Cleanup input audio file
             try:

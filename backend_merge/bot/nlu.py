@@ -23,33 +23,42 @@ def extract_intent_and_entities(text: str) -> Tuple[str, dict]:
     text_lower = text.lower().strip()
     entities = {}
     
-    # INTENT: Registration
+    # INTENT: Registration - IMPROVED with more patterns
     register_patterns = [
-        r'register|sign up|create account|join|new account',
+        r'register|sign up|create account|join|new account|enroll',
         r'my name is (\w+)',
         r'i am (\w+)',
         r'call me (\w+)',
+        r"i'm (\w+)",
+        r'register me',
     ]
     
     for pattern in register_patterns:
         if re.search(pattern, text_lower):
             # Extract name if mentioned
-            name_match = re.search(r'(?:my name is|i am|call me)\s+(\w+)', text_lower)
+            name_match = re.search(r'(?:my name is|i am|call me|i\'m)\s+(\w+)', text_lower)
             if name_match:
                 entities['name'] = name_match.group(1).title()
             
+            # Extract age if mentioned
+            age_match = re.search(r"(?:i'm|i am|age is|age:|aged|age)\s*(\d{1,3})|(\d{1,3})\s*years?\s*old", text_lower)
+            if age_match:
+                entities['age'] = age_match.group(1) or age_match.group(2)
+            
             # Extract community if mentioned
-            community_match = re.search(r'(?:in|from|community)\s+(bameka|batoufam|fondjomekwet|fondjomenkwet)', text_lower)
+            community_match = re.search(r'(?:in|from|community|at)\s+(bameka|batoufam|fondjomekwet|fondjomenkwet)', text_lower)
             if community_match:
                 entities['community'] = community_match.group(1).upper()
             
             return ('register', entities)
     
-    # INTENT: Balance Check
+    # INTENT: Balance Check - IMPROVED
     balance_patterns = [
         r'balance|how much|my money|check.*balance|what.*balance',
         r'how much do i have',
         r'show.*balance',
+        r'what.*my balance',
+        r'get.*balance',
     ]
     
     for pattern in balance_patterns:
@@ -84,7 +93,7 @@ def extract_intent_and_entities(text: str) -> Tuple[str, dict]:
     for pattern in offer_patterns:
         if re.search(pattern, text_lower):
             # Extract service type
-            service_match = re.search(r'(plumb\w*|electric\w*|carpent\w*|teach\w*|mechanic|tailor\w*|cook\w*|clean\w*)', text_lower)
+            service_match = re.search(r'(plumb\w*|electric\w*|carpent\w*|teach\w*|mechanic|tailor\w*|cook\w*|clean\w*|farm\w*|weld\w*|paint\w*|mason\w*)', text_lower)
             if service_match:
                 entities['service'] = service_match.group(1)
             
@@ -137,13 +146,35 @@ def natural_language_to_command(text: str, phone: str) -> str:
     intent, entities = extract_intent_and_entities(text)
     
     if intent == 'register':
-        # Build registration command
-        parts = ['/register']
-        if entities.get('name'):
-            parts.append(entities['name'])
-        if entities.get('community'):
-            parts.append(entities['community'])
-        return ' '.join(parts)
+        # Build registration command in proper format: /register COMMUNITY | Name | Age | Skill
+        # The backend expects: /register <COMMUNITY> | <Name> | <Age> | <Skill>
+        community = entities.get('community', 'BAMEKA')  # Default to BAMEKA if not specified
+        name = entities.get('name', '')
+        age = entities.get('age', '25')  # Default age
+        skill = ''
+        
+        # Extract skill from text if not already found
+        if not skill:
+            # Look for common skills in the text
+            skill_keywords = {
+                'farm': 'Farming', 'plumb': 'Plumbing', 'electric': 'Electrician',
+                'carpent': 'Carpenter', 'teach': 'Teacher', 'mechanic': 'Mechanic',
+                'tailor': 'Tailor', 'cook': 'Cooking', 'clean': 'Cleaning',
+                'doctor': 'Medicine', 'nurse': 'Nursing', 'driver': 'Driving',
+                'weld': 'Welding', 'paint': 'Painting', 'mason': 'Masonry'
+            }
+            text_lower = text.lower()
+            for keyword, skill_name in skill_keywords.items():
+                if keyword in text_lower:
+                    skill = skill_name
+                    break
+        
+        # If we have at least a name, construct the command
+        if name:
+            return f"/register {community} | {name} | {age} | {skill or 'General'}"
+        else:
+            # Ask for name if missing
+            return "I'd like to register you! What's your name?"
     
     elif intent == 'balance':
         return '/balance'
@@ -151,7 +182,8 @@ def natural_language_to_command(text: str, phone: str) -> str:
     elif intent == 'transfer':
         # Need both amount and recipient
         if 'amount' in entities and 'to_phone' in entities:
-            return f"/transfer {entities['amount']} {entities['to_phone']}"
+            # Correct format: /transfer <Phone> <Amount>
+            return f"/transfer {entities['to_phone']} {entities['amount']}"
         else:
             # Incomplete transfer - ask for missing info
             if 'amount' not in entities:
@@ -160,14 +192,20 @@ def natural_language_to_command(text: str, phone: str) -> str:
                 return "Who would you like to send money to? Please provide their phone number."
     
     elif intent == 'offer':
-        # Build offer command
-        if 'service' in entities and 'price' in entities:
-            return f"/offer {entities['service']} {entities['price']}"
+        # Build offer command: /offer Title | Description | Price
+        service = entities.get('service', '')
+        price = entities.get('price', '')
+        
+        if service and price:
+            # Create a title and description
+            title = f"{service.title()} Service"
+            description = f"Professional {service} services available"
+            return f"/offer {title} | {description} | {price}"
         else:
             # Incomplete offer
-            if 'service' not in entities:
+            if not service:
                 return "What service would you like to offer?"
-            if 'price' not in entities:
+            if not price:
                 return "How much would you charge for this service?"
     
     elif intent == 'search':
@@ -184,6 +222,7 @@ def natural_language_to_command(text: str, phone: str) -> str:
         return (
             "I didn't quite understand that. You can:\n"
             "• Say 'check my balance' to see your balance\n"
+            "• Say 'register me, my name is John from Bameka, I'm 25, I do farming' to create an account\n"
             "• Say 'transfer 100 to +237...' to send money\n"
             "• Say 'I offer plumbing for 500' to post a service\n"
             "• Say 'search for plumber' to find services\n"

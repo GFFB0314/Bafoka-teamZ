@@ -68,10 +68,16 @@ Use the **Execute Code** or **Call API** card in Botpress for each action.
 ```json
 {
   "audio_url": "{{event.payload.audioUrl}}",
-  "phone": "{{event.payload.from}}"
+  "phone": "{{event.payload.from}}",
+  "output_format": "both"
 }
 ```
-**Response Access**: Play audio from `{{data.response.body.audio_url}}`.
+**Response Access**: 
+- Text response: `{{data.response.body.response_text}}`
+- Audio URL: `{{data.response.body.audio_url}}`
+- Play audio using the audio URL in a "Send Audio" or "Play Audio" card
+
+**Important**: Ensure you're accessing the audio URL correctly in your Botpress workflow to play the voice response.
 
 ## 3. Bafoka API & Real Data
 - The backend is connected to the **Real Bafoka Sandbox API**.
