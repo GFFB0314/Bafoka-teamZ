@@ -1,0 +1,14 @@
+# .gitignore
+venv/
+env/
+__pycache__/
+*.py[cod]
+.env
+instance/
+.DS_Store
+*.db
+*.sqlite
+.pytest_cache/
+tests/scripts/temp_audio/
+bot/ffmpeg-*/
+static/audio/
